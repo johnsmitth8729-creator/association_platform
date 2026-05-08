@@ -19,7 +19,7 @@ def create_app(config_class='config.Config'):
     # Initialize Extensions
     db.init_app(app)
     login_manager.init_app(app)
-    migrate.init_app(app)
+    migrate.init_app(app, db)
     jwt.init_app(app)
     CORS(app)
 
