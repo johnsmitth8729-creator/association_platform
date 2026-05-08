@@ -33,14 +33,16 @@ class MiningEngine:
             df = pd.read_csv(filepath, sep=delimiter, on_bad_lines='skip', engine='python', encoding=encoding)
             df.columns = [str(c).strip() for c in df.columns]
             
-            # STEP 2: Intelligent Metadata Filtering
-            meta_patterns = ['id', 'name', 'ism', 'familiya', 'n', '№', 'index', 'fio', 't/r', 'passport', 'phone', 'tel', 'bemor']
+            # STEP 2: Intelligent Metadata Filtering (More specific patterns)
+            meta_patterns = ['id', 'name', 'ism', 'familiya', 'fio', 'passport', 'phone', 'tel', 'bemor', 't/r', 'index']
             cols_to_drop = []
             for col in df.columns[:-1]: 
-                c_low = col.lower()
-                if any(p in c_low for p in meta_patterns) or df[col].nunique() == len(df):
+                c_low = col.lower().strip()
+                # Drop if matches meta patterns or is 100% unique (likely an ID)
+                if any(p == c_low or c_low.startswith(p + '_') or c_low.endswith('_' + p) for p in meta_patterns) or df[col].nunique() == len(df):
                     cols_to_drop.append(col)
             
+            logger.info(f"Dropping columns: {cols_to_drop}")
             df = df.drop(columns=cols_to_drop)
             
             # STEP 3: Stability Guard
@@ -107,8 +109,10 @@ class MiningEngine:
             min_confidence = params.get('min_confidence', 0.4)
             max_rules = params.get('max_rules', 50)
             
-            # Ensure safety floor
-            min_support = max(min_support, 2 / row_count) if row_count > 0 else 0.1
+            # Ensure safety floor (at least 2 occurrences for reliable rules, but allow 1 if support is extremely low)
+            min_support = max(min_support, 1.1 / row_count) if row_count > 0 else 0.1
+            
+            logger.info(f"Running mining with Support: {min_support}, Confidence: {min_confidence}, Row Count: {row_count}")
 
             te = TransactionEncoder()
             te_ary = te.fit(transactions).transform(transactions)

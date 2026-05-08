@@ -50,6 +50,7 @@ def mine():
             rules = MiningEngine.run_mining(transactions, params, class_col)
             
             # If user provided a target filter, we filter the rules at route level as well
+            target_disease = target_disease.strip()
             if target_disease:
                 rules = [r for r in rules if target_disease.lower() in str(r['target_class']).lower()]
 
