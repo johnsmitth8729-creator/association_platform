@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="animate-fade-in max-w-3xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-slate-900">{{ g.translations.get('upload_dataset') }}</h1>
+        <p class="text-slate-500">Tizimga yangi ma'lumotlar to'plamini (CSV, XLSX, TXT) yuklang.</p>
+    </div>
+
+    <div class="glass-card p-10">
+        <form method="POST" enctype="multipart/form-data" id="uploadForm">
+            <div class="mb-10 text-center">
+                <div class="border-2 border-dashed border-slate-200 rounded-2xl p-12 hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer group" id="dropZone">
+                    <div class="text-5xl mb-4 group-hover:scale-110 transition-transform">📤</div>
+                    <div class="text-lg font-bold text-slate-700 mb-1">Faylni shu yerga tashlang yoki tanlang</div>
+                    <p class="text-sm text-slate-400">Maksimal 16MB. CSV, Excel formatlar ruxsat etilgan.</p>
+                    <input type="file" name="file" id="fileInput" class="hidden" accept=".csv,.xlsx,.txt">
+                </div>
+            </div>
+
+            <div id="fileInfo" class="hidden mb-8 p-4 bg-slate-50 rounded-xl flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="text-2xl">📄</div>
+                    <div>
+                        <div class="text-sm font-bold text-slate-900" id="fileName">file.csv</div>
+                        <div class="text-xs text-slate-500" id="fileSize">0 KB</div>
+                    </div>
+                </div>
+                <button type="button" id="removeFile" class="text-red-500 text-sm font-bold">O'chirish</button>
+            </div>
+
+            <button type="submit" class="w-full btn-primary-custom py-4 text-lg shadow-lg shadow-blue-100 disabled:opacity-50 disabled:cursor-not-allowed" id="submitBtn" disabled>
+                Yuklashni boshlash
+            </button>
+        </form>
+    </div>
+
+    <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="glass-card p-6">
+            <h4 class="font-bold text-slate-900 mb-2">Qo'llab-quvvatlanadigan formatlar</h4>
+            <ul class="text-sm text-slate-500 space-y-2">
+                <li>• Komma bilan ajratilgan (CSV)</li>
+                <li>• Microsoft Excel (.xlsx)</li>
+                <li>• Tab bilan ajratilgan matn (.txt)</li>
+            </ul>
+        </div>
+        <div class="glass-card p-6">
+            <h4 class="font-bold text-slate-900 mb-2">Tavsiyalar</h4>
+            <ul class="text-sm text-slate-500 space-y-2">
+                <li>• Birinchi qatorda ustun nomlari bo'lishi kerak</li>
+                <li>• Bo'sh joylar va maxsus belgilarni tozalang</li>
+                <li>• UTF-8 kodlash formatini ishlating</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const removeFile = document.getElementById('removeFile');
+    const submitBtn = document.getElementById('submitBtn');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+        handleFile(e.target.files[0]);
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-blue-400', 'bg-blue-50/30');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('border-blue-400', 'bg-blue-50/30');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-blue-400', 'bg-blue-50/30');
+        handleFile(e.dataTransfer.files[0]);
+    });
+
+    function handleFile(file) {
+        if (file) {
+            fileName.textContent = file.name;
+            fileSize.textContent = (file.size / 1024).toFixed(1) + ' KB';
+            fileInfo.classList.remove('hidden');
+            submitBtn.disabled = false;
+        }
+    }
+
+    removeFile.addEventListener('click', () => {
+        fileInput.value = '';
+        fileInfo.classList.add('hidden');
+        submitBtn.disabled = true;
+    });
+</script>
+{% endblock %}
+{% endblock %}

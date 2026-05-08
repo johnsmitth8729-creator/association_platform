@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="animate-fade-in">
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-900">{{ g.translations.get('datasets') }}</h1>
+            <p class="text-slate-500">Yuklangan barcha ma'lumotlar to'plamlari ro'yxati.</p>
+        </div>
+        <a href="{{ url_for('dataset.upload') }}" class="btn-primary-custom flex items-center gap-2">
+            <span>➕</span> {{ g.translations.get('upload_dataset') }}
+        </a>
+    </div>
+
+    <div class="glass-card overflow-hidden">
+        <table class="w-full text-left">
+            <thead class="bg-slate-50 border-b border-slate-100">
+                <tr>
+                    <th class="px-6 py-4 text-sm font-bold text-slate-600">ID</th>
+                    <th class="px-6 py-4 text-sm font-bold text-slate-600">Nomi</th>
+                    <th class="px-6 py-4 text-sm font-bold text-slate-600">Turi</th>
+                    <th class="px-6 py-4 text-sm font-bold text-slate-600">Hajmi (Rows x Cols)</th>
+                    <th class="px-6 py-4 text-sm font-bold text-slate-600">Sana</th>
+                    <th class="px-6 py-4 text-sm font-bold text-slate-600">Amallar</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for ds in datasets %}
+                <tr class="hover:bg-slate-50/50 transition-colors">
+                    <td class="px-6 py-4 text-sm text-slate-500">#{{ ds.id }}</td>
+                    <td class="px-6 py-4 text-sm font-semibold text-slate-900">{{ ds.original_name }}</td>
+                    <td class="px-6 py-4 text-sm">
+                        <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded-md font-medium uppercase">{{ ds.file_type }}</span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600">{{ ds.row_count }} x {{ ds.col_count }}</td>
+                    <td class="px-6 py-4 text-sm text-slate-500">{{ ds.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="px-6 py-4 text-sm">
+                        <div class="flex gap-3">
+                            <a href="{{ url_for('apriori.mine', dataset_id=ds.id) }}" class="text-blue-600 hover:text-blue-800 font-medium">Tahlil</a>
+                            <a href="{{ url_for('dataset.delete', id=ds.id) }}" class="text-red-500 hover:text-red-700 font-medium" onclick="return confirm('O\'chirilsinmi?')">O'chirish</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not datasets %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-slate-400 italic">Hozircha hech qanday dataset yuklanmagan.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="animate-fade-in">
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-900">Tahlil natijalari</h1>
+            <p class="text-slate-500">{{ dataset.original_name }} bo'yicha aniqlangan bog'liqliklar.</p>
+        </div>
+        <div class="flex gap-4">
+            <button onclick="window.print()" class="px-6 py-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2">
+                <span>🖨️</span> Print PDF
+            </button>
+            <a href="{{ url_for('apriori.mine') }}" class="btn-primary-custom">Yangi tahlil</a>
+        </div>
+    </div>
+
+    <!-- AI Insight Card -->
+    <div class="glass-card p-6 mb-8 bg-gradient-to-r from-blue-600 to-blue-800 text-white border-none shadow-xl shadow-blue-100">
+        <div class="flex items-start gap-4">
+            <div class="text-3xl">🤖</div>
+            <div>
+                <h3 class="text-lg font-bold mb-1">AI Sharhi</h3>
+                <p class="text-blue-100 leading-relaxed">{{ insight }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="glass-card p-5">
+            <div class="text-xs font-bold text-slate-400 uppercase mb-1">Rules Found</div>
+            <div class="text-2xl font-bold text-slate-900">{{ rules|length }}</div>
+        </div>
+        <div class="glass-card p-5">
+            <div class="text-xs font-bold text-slate-400 uppercase mb-1">Min Support</div>
+            <div class="text-2xl font-bold text-blue-600">{{ analysis.min_support }}</div>
+        </div>
+        <div class="glass-card p-5">
+            <div class="text-xs font-bold text-slate-400 uppercase mb-1">Min Confidence</div>
+            <div class="text-2xl font-bold text-blue-600">{{ analysis.min_confidence }}</div>
+        </div>
+        <div class="glass-card p-5">
+            <div class="text-xs font-bold text-slate-400 uppercase mb-1">Avg Lift</div>
+            <div class="text-2xl font-bold text-emerald-600">
+                {% set sum_lift = 0 %}
+                {% for r in rules %}{% set sum_lift = sum_lift + r.lift %}{% endfor %}
+                {{ (sum_lift / rules|length)|round(2) if rules|length > 0 else 0 }}
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <!-- Visualization -->
+        <div class="lg:col-span-2 glass-card p-8">
+            <h3 class="text-lg font-bold text-slate-900 mb-6">Support vs Confidence Scatter Plot</h3>
+            <div style="height: 400px;">
+                <canvas id="resultsChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Top Rules Sidebar -->
+        <div class="glass-card p-8">
+            <h3 class="text-lg font-bold text-slate-900 mb-6">Top Rules by Lift</h3>
+            <div class="space-y-6">
+                {% for r in rules|sort(attribute='lift', reverse=True) %}
+                {% if loop.index <= 5 %}
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <div class="text-xs font-bold text-blue-600 mb-2">RULE #{{ loop.index }}</div>
+                    <div class="text-sm font-semibold text-slate-800 mb-3">
+                        {{ r.antecedents|join(', ') }} <span class="text-blue-500 mx-1">➔</span> {{ r.consequents|join(', ') }}
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500">Lift: <strong class="text-slate-900">{{ r.lift|round(2) }}</strong></span>
+                        <span class="text-slate-500">Conf: <strong class="text-slate-900">{{ (r.confidence*100)|round(1) }}%</strong></span>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+<div x-data="{ activeClass: 'all' }">
+    <!-- Results Header & Actions -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mt-12 mb-8">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-900">Expert System Results</h2>
+            <p class="text-slate-500 text-sm">Target Class: <span class="font-bold text-blue-600">{{ rules[0].target_name if rules else 'N/A' }}</span></p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <button @click="activeClass = 'all'" :class="activeClass === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600'" class="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 transition-all">Barchasi</button>
+            {% for tc in target_classes %}
+                <button @click="activeClass = '{{ tc }}'" :class="activeClass === '{{ tc }}' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600'" class="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 transition-all">{{ tc }}</button>
+            {% endfor %}
+            <div class="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>
+            <a href="{{ url_for('apriori.export_result', id=analysis.id, format='csv') }}" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200 transition-all">CSV</a>
+            <a href="{{ url_for('apriori.export_result', id=analysis.id, format='json') }}" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200 transition-all">JSON</a>
+        </div>
+    </div>
+
+    <!-- Human Readable Rule Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        {% for r in rules %}
+        <div x-show="activeClass === 'all' || activeClass === '{{ r.target_class }}'" x-transition 
+             class="glass-card p-6 border-l-4 {{ 'border-emerald-500' if r.strength == 'Very Strong' else 'border-blue-500' if r.strength == 'Strong' else 'border-amber-500' }}">
+            <div class="flex justify-between items-start mb-4">
+                <span class="px-2 py-1 bg-slate-100 text-slate-500 rounded text-[10px] font-bold uppercase tracking-widest">Rule #{{ r.id }}</span>
+                {% if r.strength == 'Very Strong' %}
+                    <span class="px-3 py-1 bg-emerald-600 text-white rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg shadow-emerald-100">Very Strong</span>
+                {% elif r.strength == 'Strong' %}
+                    <span class="px-3 py-1 bg-blue-500 text-white rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg shadow-blue-100">Strong</span>
+                {% elif r.strength == 'Medium' %}
+                    <span class="px-3 py-1 bg-amber-500 text-white rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg shadow-amber-100">Medium</span>
+                {% else %}
+                    <span class="px-3 py-1 bg-slate-400 text-white rounded-full text-[10px] font-black uppercase tracking-wider">Weak</span>
+                {% endif %}
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase mb-2">Agar (Symptomlar/Holat):</div>
+                    <div class="flex flex-wrap gap-2">
+                        {% for item in r.antecedents %}
+                        <span class="px-3 py-1 bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200">
+                            {{ item.replace('=', ': ') }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 py-2">
+                    <div class="h-px flex-1 bg-slate-100"></div>
+                    <div class="text-blue-500">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                    </div>
+                    <div class="h-px flex-1 bg-slate-100"></div>
+                </div>
+
+                <div>
+                    <div class="text-[10px] font-bold text-blue-400 uppercase mb-2">Unda (Natija: {{ r.target_name }}):</div>
+                    <div class="px-4 py-3 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-100 flex justify-between items-center">
+                        <span class="font-bold text-lg">{{ r.target_class }}</span>
+                        <div class="text-right">
+                            <div class="text-[10px] opacity-70 uppercase font-black">Ishonchlilik</div>
+                            <div class="font-black text-xl">{{ (r.confidence * 100)|round(1) }}%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-50 flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase">
+                <span>Support: {{ r.support|round(3) }}</span>
+                <span>Lift: {{ r.lift|round(2) }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+</div>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('resultsChart');
+    const rulesData = {{ rules|tojson }};
+    
+    new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Association Rules',
+                data: rulesData.map(r => ({ x: r.support, y: r.confidence, v: r.lift })),
+                backgroundColor: 'rgba(37, 99, 235, 0.6)',
+                borderColor: '#2563EB',
+                pointRadius: 6,
+                pointHoverRadius: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { title: { display: true, text: 'Support' } },
+                y: { title: { display: true, text: 'Confidence' }, min: 0, max: 1.1 }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const point = context.raw;
+                            return `Support: ${point.x}, Confidence: ${point.y}, Lift: ${point.v}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

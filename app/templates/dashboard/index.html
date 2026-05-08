@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="animate-fade-in">
+    <header class="mb-8">
+        <h1 class="text-3xl font-bold text-slate-900">{{ g.translations.get('dashboard') }}</h1>
+        <p class="text-slate-500">Xush kelibsiz, {{ current_user.username }}! Tizim holati va analitikani ko'rishingiz mumkin.</p>
+    </header>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div class="glass-card p-6 bg-gradient-to-br from-blue-50 to-white">
+            <div class="flex justify-between items-start mb-4">
+                <div class="p-3 bg-blue-100 rounded-xl text-blue-600">📂</div>
+                <div class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">+12%</div>
+            </div>
+            <div class="text-3xl font-bold text-slate-900 mb-1">{{ dataset_count }}</div>
+            <div class="text-sm font-medium text-slate-500">{{ g.translations.get('datasets') }}</div>
+        </div>
+
+        <div class="glass-card p-6 bg-gradient-to-br from-purple-50 to-white">
+            <div class="flex justify-between items-start mb-4">
+                <div class="p-3 bg-purple-100 rounded-xl text-purple-600">🧠</div>
+                <div class="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-lg">+5%</div>
+            </div>
+            <div class="text-3xl font-bold text-slate-900 mb-1">{{ analysis_count }}</div>
+            <div class="text-sm font-medium text-slate-500">Bajarilgan tahlillar</div>
+        </div>
+
+        <div class="glass-card p-6 bg-gradient-to-br from-emerald-50 to-white">
+            <div class="flex justify-between items-start mb-4">
+                <div class="p-3 bg-emerald-100 rounded-xl text-emerald-600">✨</div>
+                <div class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">89%</div>
+            </div>
+            <div class="text-3xl font-bold text-slate-900 mb-1">{{ total_rules }}</div>
+            <div class="text-sm font-medium text-slate-500">Topilgan qoidalar</div>
+        </div>
+
+        <div class="glass-card p-6 bg-gradient-to-br from-amber-50 to-white">
+            <div class="flex justify-between items-start mb-4">
+                <div class="p-3 bg-amber-100 rounded-xl text-amber-600">⏱️</div>
+                <div class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">Active</div>
+            </div>
+            <div class="text-3xl font-bold text-slate-900 mb-1">{{ avg_processing }}s</div>
+            <div class="text-sm font-medium text-slate-500">Avg. Processing</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Main Chart Section -->
+        <div class="lg:col-span-2 glass-card p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-slate-900">Analitika tahlili</h3>
+                <select class="bg-slate-50 border-none text-sm rounded-lg p-2 outline-none">
+                    <option>Oxirgi 7 kun</option>
+                    <option>Oxirgi 30 kun</option>
+                </select>
+            </div>
+            <div id="mainChart" style="height: 300px;">
+                <!-- Chart.js or ApexCharts will be here -->
+                <div class="flex items-center justify-center h-full text-slate-400">
+                    <canvas id="dashboardChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity Section -->
+        <div class="glass-card p-8">
+            <h3 class="text-lg font-bold text-slate-900 mb-6">{{ g.translations.get('recent_uploads') }}</h3>
+            <div class="space-y-6">
+                {% for ds in recent_datasets %}
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-lg">📄</div>
+                    <div class="flex-1">
+                        <div class="text-sm font-bold text-slate-900">{{ ds.original_name }}</div>
+                        <div class="text-xs text-slate-500">{{ ds.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                    </div>
+                    <div class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">{{ ds.file_type }}</div>
+                </div>
+                {% endfor %}
+                {% if not recent_datasets %}
+                <p class="text-sm text-slate-400 italic">Hozircha ma'lumotlar yo'q</p>
+                {% endif %}
+            </div>
+            <a href="{{ url_for('dataset.list_datasets') }}" class="block text-center mt-8 text-sm font-bold text-blue-600 hover:underline">
+                Hammasini ko'rish →
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('dashboardChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ chart_labels | tojson }},
+                datasets: [{
+                    label: 'Aniqlangan qoidalar',
+                    data: {{ chart_data | tojson }},
+                    fill: true,
+                    borderColor: '#2563EB',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { display: false } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}
