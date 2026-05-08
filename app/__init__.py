@@ -5,6 +5,7 @@ from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 import os
+import logging
 import json
 
 db = SQLAlchemy()
@@ -15,6 +16,9 @@ jwt = JWTManager()
 def create_app(config_class='config.Config'):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    
+    logging.basicConfig(level=logging.INFO)
+    app.logger.info("Application starting...")
 
     # Initialize Extensions
     db.init_app(app)
